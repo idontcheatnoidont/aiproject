@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Libre Baskerville", Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-natural-bg: #FDFCFB;
+  --color-natural-surface: #F5F2ED;
+  --color-natural-sage: #5C6B5E;
+  --color-natural-stone: #3C3C3C;
+  --color-natural-clay: #C18C71;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-natural-bg);
+  color: var(--color-natural-stone);
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-gps-dash {
+  animation: dash 1.5s linear infinite;
+}
+
+.animate-gps-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
