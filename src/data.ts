@@ -117,6 +117,9 @@ export const INITIAL_FLEET: FleetTruck[] = [
     driverName: 'Rajesh Kumar',
     lat: 100,
     lng: 500,
+    zone: 'Zone 1 — Central CBD',
+    activeZones: ['MG Road', 'Brigade Road', 'Commercial Street'],
+    battery: 94,
   },
   {
     id: 'TR-102',
@@ -127,6 +130,9 @@ export const INITIAL_FLEET: FleetTruck[] = [
     driverName: 'Priya Sharma',
     lat: 800,
     lng: 480,
+    zone: 'Zone 2 — East Corridor',
+    activeZones: ['Whitefield Main', 'Forum Mall Sector', 'Indiranagar 100ft'],
+    battery: 78,
   },
   {
     id: 'TR-103',
@@ -137,6 +143,22 @@ export const INITIAL_FLEET: FleetTruck[] = [
     driverName: 'Suresh Gowda',
     lat: 300,
     lng: 250,
+    zone: 'Zone 3 — South Sector',
+    activeZones: ['Koramangala 80ft', 'HSR Layout Sec-1', 'Outer Ring Road'],
+    battery: 88,
+  },
+  {
+    id: 'TR-104',
+    name: 'EcoTruck Delta',
+    status: 'idle',
+    capacity: 35,
+    currentBinId: null,
+    driverName: 'Ananya Sen',
+    lat: 500,
+    lng: 120,
+    zone: 'Zone 4 — North Belt',
+    activeZones: ['Malleshwaram Sampige', 'Sadashivanagar', 'Yeshwanthpur Hub'],
+    battery: 92,
   },
 ];
 

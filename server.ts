@@ -1,25 +1,37 @@
 import express from "express";
 import path from "path";
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { createServer as createViteServer } from "vite";
 
 const PORT = 3000;
 const PYTHON_PORT = 5000;
 
-// Start Python backend server process
-console.log("Launching Python 3 backend process...");
-const pythonProcess = spawn("python3", ["server.py"], {
-  cwd: process.cwd(),
-  stdio: "inherit",
-});
+let pythonProcess: ChildProcess | null = null;
+let isShuttingDown = false;
 
-pythonProcess.on("error", (err) => {
-  console.error("Failed to start Python backend process:", err);
-});
+function launchPythonBackend() {
+  if (isShuttingDown) return;
+  console.log("[Node Server] Spawning Python 3 backend service on port " + PYTHON_PORT + "...");
+  
+  pythonProcess = spawn("python3", ["server.py"], {
+    cwd: process.cwd(),
+    stdio: "inherit",
+  });
 
-pythonProcess.on("exit", (code, signal) => {
-  console.warn(`Python process exited with code ${code} and signal ${signal}`);
-});
+  pythonProcess.on("error", (err) => {
+    console.error("[Node Server] Python process error:", err);
+  });
+
+  pythonProcess.on("exit", (code, signal) => {
+    console.warn(`[Node Server] Python process exited with code ${code} and signal ${signal}`);
+    if (!isShuttingDown) {
+      console.log("[Node Server] Auto-restarting Python backend in 1s...");
+      setTimeout(launchPythonBackend, 1000);
+    }
+  });
+}
+
+launchPythonBackend();
 
 async function startServer() {
   const app = express();
@@ -48,9 +60,9 @@ async function startServer() {
       res.setHeader("Content-Type", pythonRes.headers.get("content-type") || "application/json");
       res.send(data);
     } catch (error) {
-      console.error(`Error proxying request to Python backend (${targetUrl}):`, error);
-      res.status(502).json({
-        error: "Python backend unreachable",
+      console.error(`[Node Server] Error proxying request to Python backend (${targetUrl}):`, error);
+      res.status(503).json({
+        error: "Python backend temporarily unavailable",
         details: String(error),
       });
     }
@@ -72,20 +84,21 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server listening on http://0.0.0.0:${PORT}`);
-    console.log(`Connecting to Python 3 backend at http://127.0.0.1:${PYTHON_PORT}`);
+    console.log(`[Node Server] Express listening on http://0.0.0.0:${PORT}`);
+    console.log(`[Node Server] Connected to Python backend on port ${PYTHON_PORT}`);
   });
 }
 
 // Clean up Python process on server shutdown
-process.on("SIGINT", () => {
-  pythonProcess.kill("SIGINT");
+const shutdown = () => {
+  isShuttingDown = true;
+  if (pythonProcess) {
+    pythonProcess.kill("SIGTERM");
+  }
   process.exit();
-});
+};
 
-process.on("SIGTERM", () => {
-  pythonProcess.kill("SIGTERM");
-  process.exit();
-});
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 startServer();

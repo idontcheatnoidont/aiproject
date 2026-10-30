@@ -3,179 +3,216 @@ import math
 import time
 import random
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 HOST = '127.0.0.1'
 PORT = 5000
 
-# Initial mock database in memory for Python backend
+# Canonical bins database matching types.ts:
+# { id, address, fillLevel, status, x, y, weight, temperature, battery, type, lastServiced }
 BINS_DB = [
     {
         "id": "B-9021",
-        "name": "Bin #9021 - MG Road Metro",
-        "address": "MG Road Station Entrance, Zone A",
+        "address": "MG Road",
         "fillLevel": 92,
         "status": "critical",
-        "lat": 12.9756,
-        "lng": 77.6068,
+        "x": 700,
+        "y": 200,
+        "weight": 45.4,
+        "temperature": 24.2,
         "battery": 88,
-        "temp": 31,
-        "lastCleaned": "3 hours ago",
-        "predictedFullIn": "0.5 hours",
-        "wasteType": "Mixed Recyclables",
+        "type": "general",
+        "lastServiced": "2 days ago"
+    },
+    {
+        "id": "B-8832",
+        "address": "100 Feet Road, Indiranagar",
+        "fillLevel": 74,
+        "status": "warning",
+        "x": 450,
+        "y": 480,
+        "weight": 32.1,
+        "temperature": 21.8,
+        "battery": 92,
+        "type": "recyclable",
+        "lastServiced": "1 day ago"
+    },
+    {
+        "id": "B-4412",
+        "address": "80 Feet Road, Koramangala",
+        "fillLevel": 35,
+        "status": "normal",
+        "x": 320,
+        "y": 350,
+        "weight": 12.8,
+        "temperature": 19.5,
+        "battery": 95,
+        "type": "glass",
+        "lastServiced": "4 hours ago"
+    },
+    {
+        "id": "B-7714",
+        "address": "Brigade Road",
+        "fillLevel": 68,
+        "status": "warning",
+        "x": 580,
+        "y": 280,
+        "weight": 29.5,
+        "temperature": 22.0,
+        "battery": 45,
+        "type": "organic",
+        "lastServiced": "12 hours ago"
+    },
+    {
+        "id": "B-5523",
+        "address": "Commercial Street",
+        "fillLevel": 15,
+        "status": "normal",
+        "x": 210,
+        "y": 420,
+        "weight": 8.2,
+        "temperature": 18.1,
+        "battery": 79,
+        "type": "general",
+        "lastServiced": "3 days ago"
     },
     {
         "id": "B-3011",
-        "name": "Bin #3011 - Whitefield Main",
-        "address": "Whitefield Forum Mall Gate 2",
+        "address": "Whitefield Main Road",
         "fillLevel": 88,
         "status": "critical",
-        "lat": 12.9698,
-        "lng": 77.7499,
-        "battery": 94,
-        "temp": 29,
-        "lastCleaned": "5 hours ago",
-        "predictedFullIn": "1.2 hours",
-        "wasteType": "Organic Waste",
+        "x": 820,
+        "y": 510,
+        "weight": 41.2,
+        "temperature": 25.6,
+        "battery": 62,
+        "type": "recyclable",
+        "lastServiced": "2 days ago"
     },
     {
-        "id": "B-4410",
-        "name": "Bin #4410 - Indiranagar 100ft",
-        "address": "100ft Road, Corner 12",
-        "fillLevel": 72,
-        "status": "warning",
-        "lat": 12.9784,
-        "lng": 77.6408,
-        "battery": 76,
-        "temp": 32,
-        "lastCleaned": "6 hours ago",
-        "predictedFullIn": "3.5 hours",
-        "wasteType": "Dry Waste",
-    },
-    {
-        "id": "B-1088",
-        "name": "Bin #1088 - Koramangala 5th Blk",
-        "address": "Jyoti Nivas College Junction",
-        "fillLevel": 68,
-        "status": "warning",
-        "lat": 12.9345,
-        "lng": 77.6202,
-        "battery": 82,
-        "temp": 28,
-        "lastCleaned": "8 hours ago",
-        "predictedFullIn": "4.1 hours",
-        "wasteType": "Paper & Cardboard",
-    },
-    {
-        "id": "B-7721",
-        "name": "Bin #7721 - HSR Layout Sect 1",
-        "address": "27th Main Rd, HSR Sector 1",
-        "fillLevel": 35,
+        "id": "B-1204",
+        "address": "Sampige Road, Malleshwaram",
+        "fillLevel": 42,
         "status": "normal",
-        "lat": 12.9121,
-        "lng": 77.6445,
-        "battery": 98,
-        "temp": 27,
-        "lastCleaned": "12 hours ago",
-        "predictedFullIn": "14.0 hours",
-        "wasteType": "General Waste",
+        "x": 500,
+        "y": 120,
+        "weight": 19.0,
+        "temperature": 20.4,
+        "battery": 84,
+        "type": "general",
+        "lastServiced": "1 day ago"
     },
     {
-        "id": "B-5502",
-        "name": "Bin #5502 - Electronic City",
-        "address": "Phase 1 Flyover Hub",
-        "fillLevel": 22,
-        "status": "normal",
-        "lat": 12.8452,
-        "lng": 77.6602,
+        "id": "B-6690",
+        "address": "Outer Ring Road, HSR Layout",
+        "fillLevel": 61,
+        "status": "warning",
+        "x": 150,
+        "y": 220,
+        "weight": 26.3,
+        "temperature": 23.0,
         "battery": 91,
-        "temp": 26,
-        "lastCleaned": "18 hours ago",
-        "predictedFullIn": "19.5 hours",
-        "wasteType": "E-Waste / Metal",
+        "type": "organic",
+        "lastServiced": "5 hours ago"
     }
 ]
 
+# Canonical fleet database matching FleetTruck in types.ts:
+# { id, name, status, capacity, currentBinId, driverName, lat, lng, zone, activeZones, battery }
 FLEET_DB = [
     {
-        "id": "TRK-01",
-        "name": "EcoTruck Alpha (Electric)",
+        "id": "TR-101",
+        "name": "EcoTruck Alpha",
         "status": "idle",
-        "capacity": "4.2 Tons",
-        "currentLoad": "1.1 Tons",
-        "battery": 92,
-        "driver": "Alex Rivera",
-        "lat": 12.9716,
-        "lng": 77.5946,
-        "currentBinId": None
+        "capacity": 28,
+        "currentBinId": None,
+        "driverName": "Rajesh Kumar",
+        "lat": 100,
+        "lng": 500,
+        "zone": "Zone 1 — Central CBD",
+        "activeZones": ["MG Road", "Brigade Road", "Commercial Street"],
+        "battery": 94
     },
     {
-        "id": "TRK-02",
-        "name": "EcoTruck Beta (Hybrid)",
-        "status": "en_route",
-        "capacity": "5.0 Tons",
-        "currentLoad": "3.4 Tons",
-        "battery": 74,
-        "driver": "Maria Chen",
-        "lat": 12.9650,
-        "lng": 77.7200,
-        "currentBinId": "B-3011"
-    },
-    {
-        "id": "TRK-03",
-        "name": "EcoTruck Gamma (Clean Diesel)",
+        "id": "TR-102",
+        "name": "EcoTruck Beta",
         "status": "servicing",
-        "capacity": "6.5 Tons",
-        "currentLoad": "5.2 Tons",
-        "battery": 60,
-        "driver": "Siddharth Rao",
-        "lat": 12.9300,
-        "lng": 77.6150,
-        "currentBinId": "B-1088"
+        "capacity": 76,
+        "currentBinId": "B-3011",
+        "driverName": "Priya Sharma",
+        "lat": 800,
+        "lng": 480,
+        "zone": "Zone 2 — East Corridor",
+        "activeZones": ["Whitefield Main", "Forum Mall Sector", "Indiranagar 100ft"],
+        "battery": 78
+    },
+    {
+        "id": "TR-103",
+        "name": "EcoTruck Gamma",
+        "status": "idle",
+        "capacity": 12,
+        "currentBinId": None,
+        "driverName": "Suresh Gowda",
+        "lat": 300,
+        "lng": 250,
+        "zone": "Zone 3 — South Sector",
+        "activeZones": ["Koramangala 80ft", "HSR Layout Sec-1", "Outer Ring Road"],
+        "battery": 88
+    },
+    {
+        "id": "TR-104",
+        "name": "EcoTruck Delta",
+        "status": "idle",
+        "capacity": 35,
+        "currentBinId": None,
+        "driverName": "Ananya Sen",
+        "lat": 500,
+        "lng": 120,
+        "zone": "Zone 4 — North Belt",
+        "activeZones": ["Malleshwaram Sampige", "Sadashivanagar", "Yeshwanthpur Hub"],
+        "battery": 92
     }
 ]
 
 LOGS = [
-    "Python Backend initialized.",
+    "Python 3.10 Backend engine initialized.",
     "B-9021 reached 92% capacity (CRITICAL).",
     "B-3011 reached 88% capacity (CRITICAL).",
     "EcoTruck Beta dispatched to Whitefield Main Road."
 ]
 
-# Route Optimization Helper (Greedy Nearest Neighbor Algorithm in Python)
-def calculate_distance(lat1, lon1, lat2, lon2):
-    # Haversine distance in km
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+def calculate_grid_distance(x1, y1, x2, y2):
+    """Euclidean distance on the Bengaluru 1000x600 grid converted to estimated kilometers."""
+    pixel_dist = math.hypot(x2 - x1, y2 - y1)
+    # Scale factor: 1000px corresponds to ~25km across Bengaluru urban zone
+    return pixel_dist * (25.0 / 1000.0)
 
-def optimize_route(truck_lat, truck_lng, critical_bins):
-    if not critical_bins:
-        return [], 0
-    
-    unvisited = list(critical_bins)
-    curr_lat, curr_lng = truck_lat, truck_lng
+def optimize_route(truck_x, truck_y, target_bins):
+    """Greedy Nearest-Neighbor Traveling Salesperson (TSP) route optimization in Python."""
+    if not target_bins:
+        return [], 0.0
+
+    unvisited = list(target_bins)
+    curr_x, curr_y = truck_x, truck_y
     optimized = []
-    total_distance = 0.0
+    total_km = 0.0
 
     while unvisited:
-        nearest = min(unvisited, key=lambda b: calculate_distance(curr_lat, curr_lng, b['lat'], b['lng']))
-        dist = calculate_distance(curr_lat, curr_lng, nearest['lat'], nearest['lng'])
-        total_distance += dist
-        curr_lat, curr_lng = nearest['lat'], nearest['lng']
+        nearest = min(unvisited, key=lambda b: calculate_grid_distance(curr_x, curr_y, b['x'], b['y']))
+        dist = calculate_grid_distance(curr_x, curr_y, nearest['x'], nearest['y'])
+        total_km += dist
+        curr_x, curr_y = nearest['x'], nearest['y']
         optimized.append({
             "binId": nearest['id'],
-            "name": nearest['name'],
-            "lat": nearest['lat'],
-            "lng": nearest['lng'],
+            "name": f"{nearest['id']} - {nearest['address']}",
+            "x": nearest['x'],
+            "y": nearest['y'],
+            "fillLevel": nearest['fillLevel'],
             "distanceKm": round(dist, 2)
         })
         unvisited.remove(nearest)
-        
-    return optimized, round(total_distance, 2)
+
+    return optimized, round(total_km, 2)
 
 class PythonRequestHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status=200, content_type='application/json'):
@@ -254,18 +291,19 @@ class PythonRequestHandler(BaseHTTPRequestHandler):
             bin_id = payload.get('binId')
             target_bin = next((b for b in BINS_DB if b['id'] == bin_id), None)
             if target_bin:
-                target_bin['fillLevel'] = 5
+                target_bin['fillLevel'] = 12
                 target_bin['status'] = 'normal'
-                target_bin['lastCleaned'] = 'Just now'
-                target_bin['predictedFullIn'] = '22.0 hours'
-                
-                msg = f"Python Backend: Bin {bin_id} ({target_bin['address']}) emptied successfully."
+                target_bin['weight'] = 3.5
+                target_bin['lastServiced'] = 'Just now'
+
+                msg = f"Python Backend: Bin {bin_id} ({target_bin['address']}) serviced and emptied."
                 LOGS.insert(0, msg)
-                
-                # Update truck status
+
+                # Update fleet truck capacity & status
                 if FLEET_DB:
-                    FLEET_DB[0]['status'] = 'en_route'
-                    FLEET_DB[0]['currentBinId'] = bin_id
+                    FLEET_DB[0]['status'] = 'idle'
+                    FLEET_DB[0]['capacity'] = min(100, FLEET_DB[0]['capacity'] + 15)
+                    FLEET_DB[0]['currentBinId'] = None
 
                 self._set_headers(200)
                 self.wfile.write(json.dumps({
@@ -280,10 +318,11 @@ class PythonRequestHandler(BaseHTTPRequestHandler):
 
         elif path == '/api/optimize-route':
             truck = FLEET_DB[0]
+            # Prioritize critical and warning bins
             urgent_bins = [b for b in BINS_DB if b['status'] in ('critical', 'warning')]
             route, total_km = optimize_route(truck['lat'], truck['lng'], urgent_bins)
-            
-            log_entry = f"Python TSP Algorithm calculated optimal pickup route ({total_km} km total, {len(route)} stops)."
+
+            log_entry = f"Python TSP algorithm computed optimal route ({total_km} km, {len(route)} stops)."
             LOGS.insert(0, log_entry)
 
             self._set_headers(200)
@@ -291,17 +330,17 @@ class PythonRequestHandler(BaseHTTPRequestHandler):
                 "success": True,
                 "optimizedRoute": route,
                 "totalDistanceKm": total_km,
-                "estimatedDurationMins": round(total_km * 3.5, 1),
+                "estimatedDurationMins": round(total_km * 3.2, 1),
                 "truck": truck['name'],
-                "algorithm": "Python Haversine TSP Nearest-Neighbor"
+                "algorithm": "Python 2D TSP Nearest-Neighbor"
             }).encode('utf-8'))
 
         elif path == '/api/timelapse/tick':
-            # Simulate bin waste accumulation in Python engine
             for b in BINS_DB:
                 if b['fillLevel'] < 100:
                     growth = random.randint(1, 4)
                     b['fillLevel'] = min(100, b['fillLevel'] + growth)
+                    b['weight'] = round(b['weight'] + (growth * 0.4), 1)
                     if b['fillLevel'] >= 85:
                         b['status'] = 'critical'
                     elif b['fillLevel'] >= 60:

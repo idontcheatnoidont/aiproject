@@ -13,6 +13,7 @@ import { Bin, ActiveTab, SystemMode, FleetTruck } from './types';
 import {
   checkPythonBackendHealth,
   fetchBinsFromPython,
+  fetchFleetFromPython,
   cleanBinInPython,
   optimizeRouteWithPython,
   PythonHealth,
@@ -65,6 +66,11 @@ export default function App() {
         fetchBinsFromPython().then((fetchedBins) => {
           if (fetchedBins && fetchedBins.length > 0) {
             setBins(fetchedBins);
+          }
+        });
+        fetchFleetFromPython().then((fetchedFleet) => {
+          if (fetchedFleet && fetchedFleet.length > 0) {
+            setFleet(fetchedFleet);
           }
         });
       }

@@ -13,9 +13,12 @@ export interface RouteOptimizationResult {
   optimizedRoute: Array<{
     binId: string;
     name: string;
-    lat: number;
-    lng: number;
+    x?: number;
+    y?: number;
+    lat?: number;
+    lng?: number;
     distanceKm: number;
+    fillLevel?: number;
   }>;
   totalDistanceKm: number;
   estimatedDurationMins: number;

@@ -27,4 +27,7 @@ export interface FleetTruck {
   driverName: string;
   lat: number;
   lng: number;
+  zone: string;
+  activeZones: string[];
+  battery: number;
 }
